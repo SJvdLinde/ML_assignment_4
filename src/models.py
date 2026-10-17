@@ -18,7 +18,6 @@ def build_knn(features):
         ("knn", KNeighborsClassifier(n_jobs=-1)),
     ])
 
-
 def build_tree(features):
 
     return Pipeline([
@@ -26,13 +25,11 @@ def build_tree(features):
         ("tree", DecisionTreeClassifier(random_state=RANDOM_STATE)),
     ])
 
-
 def build_random_forest(features):
 
     forest = RandomForestClassifier(random_state=RANDOM_STATE, n_jobs=-1)
 
     return Pipeline([("prep", tree_preprocessor(features)),("forest", forest)])
-
 
 def nominal_column_positions(features):
 
@@ -44,12 +41,12 @@ def nominal_column_positions(features):
 
     return positions
 
-
 def build_gradient_boosting(features):
 
     nominal_positions = nominal_column_positions(features)
 
     boosting = HistGradientBoostingClassifier(categorical_features=nominal_positions,
+                                              early_stopping=False,
                                               random_state=RANDOM_STATE)
 
     return Pipeline([("prep", tree_preprocessor(features)), ("boosting", boosting)])
@@ -67,6 +64,21 @@ TREE_GRID = {
     "tree__min_samples_leaf": [1, 5, 20],
     "tree__class_weight": [None, "balanced"],
     "tree__ccp_alpha": [0.0, 0.0001],
+}
+
+RANDOM_FOREST_GRID = {
+    "forest__n_estimators": [50, 100, 200, 400],
+    "forest__max_features": ["sqrt", "log2", 0.5, None],
+    "forest__max_depth": [None, 20],
+    "forest__max_samples": [0.25, 0.5, 1.0],
+    "forest__class_weight": [None, "balanced"],
+}
+
+GRADIENT_BOOSTING_GRID = {
+    "boosting__learning_rate": [0.05, 0.1, 0.2],
+    "boosting__max_iter": [100, 300, 500],
+    "boosting__max_leaf_nodes": [7, 15, 31, 63],
+    "boosting__class_weight": [None, "balanced"],
 }
 
 SCORING = {

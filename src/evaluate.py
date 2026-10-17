@@ -11,11 +11,11 @@ from preprocessing import load_data
 CLASS_NAMES = pd.read_csv("data/attack_category_map.csv", index_col=1).iloc[:, 0]
 
 
-def evaluate(model_name, pipeline, features, y):
+def evaluate(model_name, pipeline, features, target):
 
     print(f"evaluating {model_name} ...", flush=True)
 
-    cv_results = cross_validate(pipeline, features, y, cv=evaluation_cv(),
+    cv_results = cross_validate(pipeline, features, target, cv=evaluation_cv(),
                                 scoring=SCORING, return_train_score=True)
 
     fold_scores = pd.DataFrame({m: cv_results[f"test_{m}"] for m in SCORING})
@@ -72,24 +72,25 @@ def compare(knn_scores, tree_scores):
             "better": better}
 
 
-def per_class_report(model_name, pipeline, features, y):
+def per_class_report(model_name, pipeline, features, target):
 
-    predictions = cross_val_predict(pipeline, features, y, cv=tuning_cv(), n_jobs=1)
-    labels = sorted(y.unique())
+    predictions = cross_val_predict(pipeline, features, target,
+                                    cv=tuning_cv(), n_jobs=1)
+    labels = sorted(target.unique())
     names = [CLASS_NAMES[i] for i in labels]
 
-    report = classification_report(y, predictions, target_names=names,
+    report = classification_report(target, predictions, target_names=names,
                                    output_dict=True, zero_division=0)
     pd.DataFrame(report).T.round(4).to_csv(
         f"results/tables/{model_name}_per_class.csv")
 
-    matrix = pd.DataFrame(confusion_matrix(y, predictions, labels=labels),
+    matrix = pd.DataFrame(confusion_matrix(target, predictions, labels=labels),
                           index=names, columns=names)
     matrix.to_csv(f"results/tables/{model_name}_confusion_matrix.csv")
 
 
 if __name__ == "__main__":
-    features, y = load_data()
+    features, target = load_data()
     with open("results/best_params.json") as f:
         best_params = json.load(f)
 
@@ -103,7 +104,7 @@ if __name__ == "__main__":
     # score both models with the cross-validation
     scores_per_model, results_per_model = {}, {}
     for model_name, pipeline in pipelines.items():
-        fold_scores, cv_results = evaluate(model_name, pipeline, features, y)
+        fold_scores, cv_results = evaluate(model_name, pipeline, features, target)
         scores_per_model[model_name] = fold_scores
         results_per_model[model_name] = cv_results
 
@@ -122,6 +123,6 @@ if __name__ == "__main__":
     # per-class scores and confusion matrices
     for model_name, pipeline in pipelines.items():
         print(f"per-class results for {model_name} ...", flush=True)
-        per_class_report(model_name, pipeline, features, y)
+        per_class_report(model_name, pipeline, features, target)
 
     print("tables written to results/tables/")

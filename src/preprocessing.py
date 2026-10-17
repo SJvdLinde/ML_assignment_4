@@ -30,10 +30,9 @@ def load_data(path=DATA_PATH, dedup=True):
         df = df.drop_duplicates()
 
     features = df.drop(columns=[TARGET])
-    y = df[TARGET]
+    target = df[TARGET]
 
-    return features, y
-
+    return features, target
 
 def numeric_columns(features, drop_redundant):
 
@@ -42,7 +41,6 @@ def numeric_columns(features, drop_redundant):
         cols = [c for c in cols if c not in REDUNDANT]
 
     return cols
-
 
 def knn_preprocessor(features):
 
@@ -67,7 +65,6 @@ def knn_preprocessor(features):
         ("nom", nominal_steps, NOMINAL),
     ])
 
-
 def tree_preprocessor(features):
 
     numeric = numeric_columns(features, drop_redundant=False)
@@ -85,12 +82,11 @@ def tree_preprocessor(features):
         ("nom", nominal_steps, NOMINAL),
     ])
 
-
 if __name__ == "__main__":
     
-    features, y = load_data()
-    print("features:", features.shape, " target:", y.shape)
-    print("classes:", sorted(y.unique()))
+    features, target = load_data()
+    print("features:", features.shape, " target:", target.shape)
+    print("classes:", sorted(target.unique()))
 
     knn = knn_preprocessor(features).fit_transform(features)
     print("after knn preprocessing:", knn.shape)
