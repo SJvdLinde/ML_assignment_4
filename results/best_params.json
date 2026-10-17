@@ -1,0 +1,14 @@
+{
+  "knn": {
+    "knn__n_neighbors": 5,
+    "knn__p": 1,
+    "knn__weights": "distance"
+  },
+  "tree": {
+    "tree__ccp_alpha": 0.0001,
+    "tree__class_weight": "balanced",
+    "tree__criterion": "gini",
+    "tree__max_depth": 20,
+    "tree__min_samples_leaf": 1
+  }
+}

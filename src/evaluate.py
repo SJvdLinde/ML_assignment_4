@@ -11,11 +11,11 @@ from preprocessing import load_data
 CLASS_NAMES = pd.read_csv("data/attack_category_map.csv", index_col=1).iloc[:, 0]
 
 
-def evaluate(model_name, pipeline, X, y):
+def evaluate(model_name, pipeline, features, y):
 
     print(f"evaluating {model_name} ...", flush=True)
 
-    cv_results = cross_validate(pipeline, X, y, cv=evaluation_cv(),
+    cv_results = cross_validate(pipeline, features, y, cv=evaluation_cv(),
                                 scoring=SCORING, return_train_score=True)
 
     fold_scores = pd.DataFrame({m: cv_results[f"test_{m}"] for m in SCORING})
@@ -72,9 +72,9 @@ def compare(knn_scores, tree_scores):
             "better": better}
 
 
-def per_class_report(model_name, pipeline, X, y):
+def per_class_report(model_name, pipeline, features, y):
 
-    predictions = cross_val_predict(pipeline, X, y, cv=tuning_cv(), n_jobs=1)
+    predictions = cross_val_predict(pipeline, features, y, cv=tuning_cv(), n_jobs=1)
     labels = sorted(y.unique())
     names = [CLASS_NAMES[i] for i in labels]
 
@@ -89,12 +89,12 @@ def per_class_report(model_name, pipeline, X, y):
 
 
 if __name__ == "__main__":
-    X, y = load_data()
+    features, y = load_data()
     with open("results/best_params.json") as f:
         best_params = json.load(f)
 
     # rebuild each model using the configuration found by the grid search
-    pipelines = {"knn": build_knn(X), "tree": build_tree(X)}
+    pipelines = {"knn": build_knn(features), "tree": build_tree(features)}
     for model_name, pipeline in pipelines.items():
         pipeline.set_params(**best_params[model_name])
         print(f"{model_name}: {best_params[model_name]}")
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     # score both models with the cross-validation
     scores_per_model, results_per_model = {}, {}
     for model_name, pipeline in pipelines.items():
-        fold_scores, cv_results = evaluate(model_name, pipeline, X, y)
+        fold_scores, cv_results = evaluate(model_name, pipeline, features, y)
         scores_per_model[model_name] = fold_scores
         results_per_model[model_name] = cv_results
 
@@ -122,6 +122,6 @@ if __name__ == "__main__":
     # per-class scores and confusion matrices
     for model_name, pipeline in pipelines.items():
         print(f"per-class results for {model_name} ...", flush=True)
-        per_class_report(model_name, pipeline, X, y)
+        per_class_report(model_name, pipeline, features, y)
 
     print("tables written to results/tables/")

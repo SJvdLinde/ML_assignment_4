@@ -29,24 +29,24 @@ def load_data(path=DATA_PATH, dedup=True):
     if dedup:
         df = df.drop_duplicates()
 
-    X = df.drop(columns=[TARGET])
+    features = df.drop(columns=[TARGET])
     y = df[TARGET]
 
-    return X, y
+    return features, y
 
 
-def numeric_columns(X, drop_redundant):
+def numeric_columns(features, drop_redundant):
 
-    cols = [c for c in X.columns if c not in NOMINAL]
+    cols = [c for c in features.columns if c not in NOMINAL]
     if drop_redundant:
         cols = [c for c in cols if c not in REDUNDANT]
 
     return cols
 
 
-def knn_preprocessor(X):
+def knn_preprocessor(features):
 
-    numeric = numeric_columns(X, drop_redundant=True)
+    numeric = numeric_columns(features, drop_redundant=True)
 
     numeric_steps = Pipeline([
         ("log", FunctionTransformer(np.log1p)),
@@ -68,9 +68,9 @@ def knn_preprocessor(X):
     ])
 
 
-def tree_preprocessor(X):
+def tree_preprocessor(features):
 
-    numeric = numeric_columns(X, drop_redundant=False)
+    numeric = numeric_columns(features, drop_redundant=False)
 
     nominal_steps = Pipeline([
         ("fill", SimpleImputer(strategy="constant", fill_value="none")),
@@ -88,12 +88,12 @@ def tree_preprocessor(X):
 
 if __name__ == "__main__":
     
-    X, y = load_data()
-    print("features:", X.shape, " target:", y.shape)
+    features, y = load_data()
+    print("features:", features.shape, " target:", y.shape)
     print("classes:", sorted(y.unique()))
 
-    knn = knn_preprocessor(X).fit_transform(X)
+    knn = knn_preprocessor(features).fit_transform(features)
     print("after knn preprocessing:", knn.shape)
 
-    tree = tree_preprocessor(X).fit_transform(X)
+    tree = tree_preprocessor(features).fit_transform(features)
     print("after tree preprocessing:", tree.shape)

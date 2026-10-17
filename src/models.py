@@ -1,40 +1,66 @@
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.metrics import cohen_kappa_score, make_scorer, matthews_corrcoef
 from sklearn.model_selection import RepeatedStratifiedKFold, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.tree import DecisionTreeClassifier
 
-from preprocessing import knn_preprocessor, tree_preprocessor
+from preprocessing import NOMINAL, knn_preprocessor, tree_preprocessor
 
-RANDOM_STATE = 42
+RANDOM_STATE = 12
 N_FOLDS = 5
 N_REPEATS = 4
 
-
-def build_knn(X):
+def build_knn(features):
 
     return Pipeline([
-        ("prep", knn_preprocessor(X)),
+        ("prep", knn_preprocessor(features)),
         ("knn", KNeighborsClassifier(n_jobs=-1)),
     ])
 
 
-def build_tree(X):
+def build_tree(features):
 
     return Pipeline([
-        ("prep", tree_preprocessor(X)),
+        ("prep", tree_preprocessor(features)),
         ("tree", DecisionTreeClassifier(random_state=RANDOM_STATE)),
     ])
 
 
-# knn tuning grid search parameters
+def build_random_forest(features):
+
+    forest = RandomForestClassifier(random_state=RANDOM_STATE, n_jobs=-1)
+
+    return Pipeline([("prep", tree_preprocessor(features)),("forest", forest)])
+
+
+def nominal_column_positions(features):
+
+    number_of_features = features.shape[1]
+    number_of_nominal = len(NOMINAL)
+    first_nominal_position = number_of_features - number_of_nominal
+
+    positions = list(range(first_nominal_position, number_of_features))
+
+    return positions
+
+
+def build_gradient_boosting(features):
+
+    nominal_positions = nominal_column_positions(features)
+
+    boosting = HistGradientBoostingClassifier(categorical_features=nominal_positions,
+                                              random_state=RANDOM_STATE)
+
+    return Pipeline([("prep", tree_preprocessor(features)), ("boosting", boosting)])
+
+
 KNN_GRID = {
     "knn__n_neighbors": [1, 3, 5, 10, 20, 50],
     "knn__weights": ["uniform", "distance"],
     "knn__p": [1, 2],
 }
 
-# tree tuning grid search parameters
 TREE_GRID = {
     "tree__criterion": ["gini", "entropy"],
     "tree__max_depth": [None, 10, 20, 30],
@@ -43,7 +69,6 @@ TREE_GRID = {
     "tree__ccp_alpha": [0.0, 0.0001],
 }
 
-# scoring on multiple metrics
 SCORING = {
     "accuracy": "accuracy",
     "balanced_accuracy": "balanced_accuracy",
@@ -54,12 +79,10 @@ SCORING = {
 
 PRIMARY_METRIC = "f1_macro"
 
-
 def tuning_cv():
     """Cross-validation used during the grid search."""
     return StratifiedKFold(n_splits=N_FOLDS, shuffle=True,
                            random_state=RANDOM_STATE)
-
 
 def evaluation_cv():
     """Cross-validation used for the final performance estimates."""

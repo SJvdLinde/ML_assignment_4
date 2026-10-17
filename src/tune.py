@@ -10,7 +10,7 @@ from models import (KNN_GRID, PRIMARY_METRIC, RANDOM_STATE, SCORING, TREE_GRID,
 from preprocessing import load_data
 
 
-def run_grid_search(model_name, pipeline, grid, X, y, n_jobs):
+def run_grid_search(model_name, pipeline, grid, features, y, n_jobs):
 
     print(f"tuning {model_name} ...", flush=True)
 
@@ -25,7 +25,7 @@ def run_grid_search(model_name, pipeline, grid, X, y, n_jobs):
     )
 
     start = time.time()
-    search.fit(X, y)
+    search.fit(features, y)
     minutes = (time.time() - start) / 60
 
     # save the score of every configuration
@@ -46,25 +46,27 @@ def run_grid_search(model_name, pipeline, grid, X, y, n_jobs):
 #python src/tune.py 40000
 
 if __name__ == "__main__":
-    X, y = load_data()
+    features, y = load_data()
 
     # tune on a subset of the data
     if len(sys.argv) > 1:
         sample_size = int(sys.argv[1])
-        X, _, y, _ = train_test_split(X, y, train_size=sample_size, stratify=y,
-                                      random_state=RANDOM_STATE)
+        features, _, y, _ = train_test_split(features, y,
+                                             train_size=sample_size,
+                                             stratify=y,
+                                             random_state=RANDOM_STATE)
 
-    print(f"{len(X)} instances, {X.shape[1]} features\n", flush=True)
+    print(f"{len(features)} instances, {features.shape[1]} features\n", flush=True)
 
     best_params = {}
 
     # run the nearest neighbour grid search
-    best_params["knn"] = run_grid_search("knn", build_knn(X), KNN_GRID,
-                                         X, y, n_jobs=1)
+    best_params["knn"] = run_grid_search("knn", build_knn(features), KNN_GRID,
+                                         features, y, n_jobs=1)
 
     # run the classification tree grid search
-    best_params["tree"] = run_grid_search("tree", build_tree(X), TREE_GRID,
-                                          X, y, n_jobs=-1)
+    best_params["tree"] = run_grid_search("tree", build_tree(features), TREE_GRID,
+                                          features, y, n_jobs=-1)
 
     with open("results/best_params.json", "w") as f:
         json.dump(best_params, f, indent=2)
