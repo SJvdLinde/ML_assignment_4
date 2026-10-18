@@ -67,13 +67,17 @@ def save_best_params(best_params):
     with open(BEST_PARAMS_PATH, "w") as f:
         json.dump(best_params, f, indent=2)
 
-# The number of instances to use can be given as a command line argument:
 #python src/tune.py 40000
+#python src/tune.py 40000 boosting
 
 if __name__ == "__main__":
     os.makedirs(TABLES_FOLDER, exist_ok=True)
 
     features, target = load_data()
+
+    models_to_tune = ["forest", "boosting"]
+    if len(sys.argv) > 2:
+        models_to_tune = [sys.argv[2]]
 
     # tune on a subset of the data
     if len(sys.argv) > 1:
@@ -91,17 +95,19 @@ if __name__ == "__main__":
     # search itself runs one configuration at a time (n_jobs=1)
 
     # run the random forest grid search
-    forest_pipeline = build_random_forest(features)
-    best_params["forest"] = run_grid_search("forest", forest_pipeline,
-                                            RANDOM_FOREST_GRID,
-                                            features, target, n_jobs=1)
-    save_best_params(best_params)
+    if "forest" in models_to_tune:
+        forest_pipeline = build_random_forest(features)
+        best_params["forest"] = run_grid_search("forest", forest_pipeline,
+                                                RANDOM_FOREST_GRID,
+                                                features, target, n_jobs=1)
+        save_best_params(best_params)
 
     # run the gradient boosting grid search
-    boosting_pipeline = build_gradient_boosting(features)
-    best_params["boosting"] = run_grid_search("boosting", boosting_pipeline,
-                                              GRADIENT_BOOSTING_GRID,
-                                              features, target, n_jobs=1)
-    save_best_params(best_params)
+    if "boosting" in models_to_tune:
+        boosting_pipeline = build_gradient_boosting(features)
+        best_params["boosting"] = run_grid_search("boosting", boosting_pipeline,
+                                                  GRADIENT_BOOSTING_GRID,
+                                                  features, target, n_jobs=1)
+        save_best_params(best_params)
 
     print(f"best parameters written to {BEST_PARAMS_PATH}")

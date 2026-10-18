@@ -47,6 +47,7 @@ def build_gradient_boosting(features):
 
     boosting = HistGradientBoostingClassifier(categorical_features=nominal_positions,
                                               early_stopping=False,
+                                              l2_regularization=1.0,
                                               random_state=RANDOM_STATE)
 
     return Pipeline([("prep", tree_preprocessor(features)), ("boosting", boosting)])
