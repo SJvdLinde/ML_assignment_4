@@ -1,0 +1,5 @@
+model,fit_time_mean_s,fit_time_std_s,predict_time_mean_s,predict_ms_per_1000_instances
+knn,0.3251,0.0243,26.2942,807.8354
+tree,2.097,0.0266,0.0468,1.4373
+forest,56.6601,3.078,0.5021,15.4245
+boosting,40.84,7.8337,1.5333,47.108
