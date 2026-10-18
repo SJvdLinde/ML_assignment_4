@@ -1,3 +1,4 @@
+import numpy as np
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.metrics import cohen_kappa_score, make_scorer, matthews_corrcoef
 from sklearn.model_selection import RepeatedStratifiedKFold, StratifiedKFold
@@ -10,6 +11,7 @@ from preprocessing import NOMINAL, knn_preprocessor, tree_preprocessor
 RANDOM_STATE = 12
 N_FOLDS = 5
 N_REPEATS = 4
+NORMAL_LABEL = 0
 
 def build_knn(features):
 
@@ -82,15 +84,46 @@ GRADIENT_BOOSTING_GRID = {
     "boosting__class_weight": [None, "balanced"],
 }
 
+def attack_detection_rate(true_labels, predicted_labels):
+
+    true_labels = np.asarray(true_labels)
+    predicted_labels = np.asarray(predicted_labels)
+
+    is_attack = true_labels != NORMAL_LABEL
+    predicted_as_attack = predicted_labels != NORMAL_LABEL
+
+    detected_attacks = np.sum(is_attack & predicted_as_attack)
+    total_attacks = np.sum(is_attack)
+
+    return detected_attacks / total_attacks
+
+
+def false_alarm_rate(true_labels, predicted_labels):
+
+    true_labels = np.asarray(true_labels)
+    predicted_labels = np.asarray(predicted_labels)
+
+    is_normal = true_labels == NORMAL_LABEL
+    predicted_as_attack = predicted_labels != NORMAL_LABEL
+
+    false_alarms = np.sum(is_normal & predicted_as_attack)
+    total_normal = np.sum(is_normal)
+
+    return false_alarms / total_normal
+
+
 SCORING = {
     "accuracy": "accuracy",
     "balanced_accuracy": "balanced_accuracy",
     "f1_macro": "f1_macro",
     "mcc": make_scorer(matthews_corrcoef),
     "kappa": make_scorer(cohen_kappa_score),
+    "attack_detection_rate": make_scorer(attack_detection_rate),
+    "false_alarm_rate": make_scorer(false_alarm_rate),
 }
 
 PRIMARY_METRIC = "f1_macro"
+LOWER_IS_BETTER = ["false_alarm_rate"]
 
 def tuning_cv():
     """Cross-validation used during the grid search."""

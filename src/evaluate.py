@@ -1,10 +1,9 @@
 import json
 import os
 import pandas as pd
-from scipy.stats import wilcoxon
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import cross_val_predict, cross_validate
-from models import (N_FOLDS, PRIMARY_METRIC, SCORING, build_gradient_boosting,
+from models import (N_FOLDS, SCORING, build_gradient_boosting,
                     build_knn, build_random_forest, build_tree, evaluation_cv,
                     tuning_cv)
 from preprocessing import load_data
@@ -84,28 +83,6 @@ def timing_table(scores_per_model, number_of_instances):
     return pd.DataFrame(rows).round(4)
 
 
-def compare(knn_scores, tree_scores):
-
-    knn_f1 = knn_scores[PRIMARY_METRIC].to_numpy()
-    tree_f1 = tree_scores[PRIMARY_METRIC].to_numpy()
-
-    statistic, p_value = wilcoxon(knn_f1, tree_f1)
-    better = "tree" if tree_f1.mean() > knn_f1.mean() else "knn"
-
-    print("Wilcoxon signed-rank test on paired " + PRIMARY_METRIC)
-    print(f"  knn  {knn_f1.mean():.4f} +- {knn_f1.std():.4f}")
-    print(f"  tree {tree_f1.mean():.4f} +- {tree_f1.std():.4f}")
-    print(f"  n = {len(knn_f1)} paired folds, "
-          f"statistic = {statistic}, p = {p_value:.3e}")
-    if p_value < 0.05:
-        print(f"  reject H0 at alpha = 0.05: {better} performs better\n")
-    else:
-        print("  cannot reject H0 at alpha = 0.05\n")
-
-    return {"statistic": float(statistic), "p_value": float(p_value),
-            "better": better}
-
-
 def per_class_report(model_name, pipeline, features, target):
 
     predictions = cross_val_predict(pipeline, features, target,
@@ -147,7 +124,7 @@ if __name__ == "__main__":
 
 
         all_folds = pd.concat(scores_per_model.values(), ignore_index=True)
-        all_folds.round(4).to_csv(f"{TABLES_FOLDER}/fold_scores.csv", index=False)
+        all_folds.to_csv(f"{TABLES_FOLDER}/fold_scores.csv", index=False)
 
     summary = summary_table(results_per_model)
     summary.to_csv(f"{TABLES_FOLDER}/final_results.csv", index=False)
@@ -157,10 +134,6 @@ if __name__ == "__main__":
     timing.to_csv(f"{TABLES_FOLDER}/timing.csv", index=False)
     print(timing.to_string(index=False), "\n")
 
-    # test whether the difference between the models is significant
-    comparison = compare(scores_per_model["knn"], scores_per_model["tree"])
-    with open("results/comparison.json", "w") as f:
-        json.dump(comparison, f, indent=2)
 
     # per-class scores and confusion matrices
     for model_name, pipeline in pipelines.items():

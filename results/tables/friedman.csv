@@ -1,0 +1,8 @@
+metric,statistic,p_value,significant
+accuracy,55.5,5.3707942167387925e-12,True
+balanced_accuracy,60.0,5.878230727906921e-13,True
+f1_macro,54.06,1.0894816146419459e-11,True
+mcc,55.5,5.3707942167387925e-12,True
+kappa,60.0,5.878230727906921e-13,True
+attack_detection_rate,60.0,5.878230727906921e-13,True
+false_alarm_rate,60.0,5.878230727906921e-13,True
