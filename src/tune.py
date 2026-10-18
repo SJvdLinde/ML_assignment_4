@@ -1,13 +1,18 @@
 import json
+import os
 import sys
 import time
 
 import pandas as pd
 from sklearn.model_selection import GridSearchCV, train_test_split
 
-from models import (KNN_GRID, PRIMARY_METRIC, RANDOM_STATE, SCORING, TREE_GRID,
-                    build_knn, build_tree, tuning_cv)
+from models import (GRADIENT_BOOSTING_GRID, PRIMARY_METRIC, RANDOM_FOREST_GRID,
+                    RANDOM_STATE, SCORING, build_gradient_boosting,
+                    build_random_forest, tuning_cv)
 from preprocessing import load_data
+
+BEST_PARAMS_PATH = "results/best_params.json"
+TABLES_FOLDER = "results/tables"
 
 
 def run_grid_search(model_name, pipeline, grid, features, target, n_jobs):
@@ -21,6 +26,7 @@ def run_grid_search(model_name, pipeline, grid, features, target, n_jobs):
         refit=PRIMARY_METRIC,
         cv=tuning_cv(),
         n_jobs=n_jobs,
+        return_train_score=True,
         verbose=1,
     )
 
@@ -34,7 +40,7 @@ def run_grid_search(model_name, pipeline, grid, features, target, n_jobs):
                      if c.startswith(("param_", "mean_", "std_"))]
     all_scores = all_scores[score_columns].sort_values(
         f"mean_test_{PRIMARY_METRIC}", ascending=False)
-    all_scores.to_csv(f"results/tables/{model_name}_grid.csv", index=False)
+    all_scores.to_csv(f"{TABLES_FOLDER}/{model_name}_grid.csv", index=False)
 
     print(f"  {len(all_scores)} configurations in {minutes:.1f} min")
     print(f"  best {PRIMARY_METRIC}: {search.best_score_:.4f}")
@@ -42,10 +48,31 @@ def run_grid_search(model_name, pipeline, grid, features, target, n_jobs):
 
     return search.best_params_
 
+
+def load_best_params():
+
+    # the assignment 2 configurations are already in this file, so read it
+    # first and add to it, instead of overwriting it
+    if not os.path.exists(BEST_PARAMS_PATH):
+        return {}
+
+    with open(BEST_PARAMS_PATH) as f:
+        best_params = json.load(f)
+
+    return best_params
+
+
+def save_best_params(best_params):
+
+    with open(BEST_PARAMS_PATH, "w") as f:
+        json.dump(best_params, f, indent=2)
+
 # The number of instances to use can be given as a command line argument:
 #python src/tune.py 40000
 
 if __name__ == "__main__":
+    os.makedirs(TABLES_FOLDER, exist_ok=True)
+
     features, target = load_data()
 
     # tune on a subset of the data
@@ -58,17 +85,23 @@ if __name__ == "__main__":
 
     print(f"{len(features)} instances, {features.shape[1]} features\n", flush=True)
 
-    best_params = {}
+    best_params = load_best_params()
 
-    # run the nearest neighbour grid search
-    best_params["knn"] = run_grid_search("knn", build_knn(features), KNN_GRID,
-                                         features, target, n_jobs=1)
+    # both ensembles already use all the CPU cores on their own, so the grid
+    # search itself runs one configuration at a time (n_jobs=1)
 
-    # run the classification tree grid search
-    best_params["tree"] = run_grid_search("tree", build_tree(features), TREE_GRID,
-                                          features, target, n_jobs=-1)
+    # run the random forest grid search
+    forest_pipeline = build_random_forest(features)
+    best_params["forest"] = run_grid_search("forest", forest_pipeline,
+                                            RANDOM_FOREST_GRID,
+                                            features, target, n_jobs=1)
+    save_best_params(best_params)
 
-    with open("results/best_params.json", "w") as f:
-        json.dump(best_params, f, indent=2)
+    # run the gradient boosting grid search
+    boosting_pipeline = build_gradient_boosting(features)
+    best_params["boosting"] = run_grid_search("boosting", boosting_pipeline,
+                                              GRADIENT_BOOSTING_GRID,
+                                              features, target, n_jobs=1)
+    save_best_params(best_params)
 
-    print("best parameters written to results/best_params.json")
+    print(f"best parameters written to {BEST_PARAMS_PATH}")
